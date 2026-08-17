@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign In · CineSubz</title>
+<meta name="description" content="Sign in to CineSubz to search Sinhala subtitled movies.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&family=Noto+Sans+Sinhala:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a090c;
+  --bg-2:#121016;
+  --card:#17151b;
+  --glass:rgba(23,21,27,0.72);
+  --border:rgba(244,207,110,0.14);
+  --border-soft:rgba(255,255,255,0.07);
+  --ink:#f4efe4;
+  --sec:#b6afc0;
+  --muted:#726c7c;
+  --gold:#d9b24c;
+  --gold-2:#f4d98a;
+  --crimson:#7a1626;
+  --crimson-2:#4a0e18;
+  --ok:#4fae7c;
+  --err:#e0566a;
+  --radius:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{
+  font-family:'Inter','Noto Sans Sinhala',sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100vh;
+  overflow-x:hidden;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}
+}
+
+/* ---------- Ambient stage backdrop ---------- */
+.stage-bg{position:fixed;inset:0;z-index:0;background:
+  radial-gradient(ellipse 60% 50% at 50% 0%, rgba(217,178,76,0.10) 0%, transparent 60%),
+  radial-gradient(ellipse 50% 40% at 15% 90%, rgba(122,22,38,0.18) 0%, transparent 60%),
+  radial-gradient(ellipse 50% 40% at 85% 90%, rgba(122,22,38,0.14) 0%, transparent 60%),
+  var(--bg);
+}
+.grain{position:fixed;inset:0;z-index:1;opacity:.05;pointer-events:none;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.rays{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:.5;
+  background:conic-gradient(from 200deg at 50% -10%, transparent 0deg, rgba(217,178,76,0.05) 8deg, transparent 16deg, transparent 40deg, rgba(217,178,76,0.04) 48deg, transparent 56deg);
+  animation:rays 30s linear infinite;
+}
+@keyframes rays{to{transform:rotate(360deg)}}
+
+/* ---------- Curtains ---------- */
+.curtain{position:fixed;top:0;bottom:0;width:52%;z-index:50;
+  background:
+    repeating-linear-gradient(90deg, rgba(0,0,0,0.28) 0px, rgba(0,0,0,0.28) 2px, transparent 2px, transparent 26px),
+    linear-gradient(180deg, var(--crimson) 0%, var(--crimson-2) 65%, #2c0a11 100%);
+  box-shadow: inset -40px 0 80px rgba(0,0,0,0.55);
+}
+.curtain::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg, rgba(0,0,0,0.35), transparent 30%, transparent 70%, rgba(0,0,0,0.35));}
+.curtain.left{left:0;transform-origin:left center;animation:openLeft 1.4s cubic-bezier(.76,0,.24,1) .15s forwards;}
+.curtain.right{right:0;transform-origin:right center;animation:openRight 1.4s cubic-bezier(.76,0,.24,1) .15s forwards;}
+@keyframes openLeft{to{transform:translateX(-105%);}}
+@keyframes openRight{to{transform:translateX(105%);}}
+.curtain-valance{position:fixed;top:0;left:0;right:0;height:46px;z-index:51;
+  background:linear-gradient(180deg, var(--crimson-2), #1c060b);
+  box-shadow:0 6px 24px rgba(0,0,0,0.6);
+  opacity:0;animation:fadeValance .6s ease 1.3s forwards;
+}
+@keyframes fadeValance{to{opacity:1}}
+
+/* ---------- Marquee lights ---------- */
+.marquee-frame{position:relative;border-radius:calc(var(--radius) + 10px);padding:3px;
+  background:transparent;
+}
+.marquee-frame .bulbs{position:absolute;inset:0;border-radius:inherit;pointer-events:none;}
+.marquee-frame .bulbs span{position:absolute;width:5px;height:5px;border-radius:50%;background:var(--gold-2);
+  box-shadow:0 0 6px 2px rgba(244,217,138,0.8);
+  animation:blink 1.8s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1.05)}}
+
+/* ---------- Card ---------- */
+.wrap{position:relative;z-index:10;width:100%;max-width:420px;padding:24px;
+  opacity:0;transform:translateY(14px);animation:riseIn .8s cubic-bezier(.2,.8,.2,1) 1.15s forwards;}
+@keyframes riseIn{to{opacity:1;transform:translateY(0)}}
+
+.logo-row{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:22px;text-align:center}
+.reel{width:34px;height:34px;color:var(--gold);animation:spin 9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.logo-row h1{font-family:'Playfair Display',serif;font-weight:800;font-size:2rem;letter-spacing:.02em;
+  background:linear-gradient(135deg,var(--gold-2),var(--gold) 55%,#a97f2a);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-top:6px;}
+.logo-row p{color:var(--sec);font-size:.85rem;letter-spacing:.04em}
+
+.card{background:var(--glass);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border:1px solid var(--border);border-radius:var(--radius);padding:26px 24px 22px;
+  box-shadow:0 30px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.02) inset;}
+
+.tabs{display:flex;background:rgba(255,255,255,0.04);border:1px solid var(--border-soft);border-radius:12px;padding:4px;margin-bottom:20px;position:relative;}
+.tabs button{flex:1;position:relative;z-index:2;background:transparent;border:none;color:var(--sec);font-family:inherit;
+  font-weight:600;font-size:.85rem;padding:9px 0;cursor:pointer;border-radius:9px;transition:color .3s;}
+.tabs button.active{color:#171017}
+.tab-slider{position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);border-radius:9px;
+  background:linear-gradient(135deg,var(--gold-2),var(--gold));transition:transform .35s cubic-bezier(.5,0,.2,1);z-index:1;}
+.tabs button:nth-child(2).active ~ .tab-slider,.tab-slider.to-right{transform:translateX(100%);}
+
+.field{position:relative;margin-bottom:14px;}
+.field .icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--muted);pointer-events:none;transition:color .25s}
+.field input{width:100%;background:rgba(255,255,255,0.03);border:1px solid var(--border-soft);border-radius:11px;
+  padding:14px 14px 14px 42px;color:var(--ink);font-family:inherit;font-size:.92rem;outline:none;transition:all .25s;}
+.field input::placeholder{color:var(--muted)}
+.field input:focus{border-color:rgba(217,178,76,0.55);box-shadow:0 0 0 4px rgba(217,178,76,0.1);}
+.field input:focus ~ .icon{color:var(--gold)}
+.field .toggle-eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--muted);
+  background:none;border:none;cursor:pointer;padding:2px;display:flex;}
+.field .toggle-eye:hover{color:var(--sec)}
+
+.name-field{display:none}
+.name-field.show{display:block}
+
+.submit-btn{width:100%;margin-top:6px;background:linear-gradient(135deg,var(--gold-2),var(--gold) 60%,#b6892f);
+  border:none;border-radius:12px;padding:14px;font-family:inherit;font-weight:700;font-size:.92rem;color:#1a1208;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .25s;
+  box-shadow:0 10px 26px rgba(217,178,76,0.22);}
+.submit-btn:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(217,178,76,0.32);}
+.submit-btn:active{transform:translateY(0)}
+.submit-btn:disabled{opacity:.65;cursor:not-allowed;transform:none}
+.submit-btn .spin{width:16px;height:16px;border-radius:50%;border:2px solid rgba(26,18,8,0.3);border-top-color:#1a1208;
+  animation:spin2 .7s linear infinite;display:none;}
+.submit-btn.loading .spin{display:inline-block}
+.submit-btn.loading .btn-label{display:none}
+@keyframes spin2{to{transform:rotate(360deg)}}
+
+.msg{min-height:20px;text-align:center;font-size:.82rem;margin:12px 0 2px;color:var(--err);transition:opacity .2s}
+.msg.ok{color:var(--ok)}
+.msg:empty{margin:0}
+
+.disabled-panel{text-align:center;padding:20px 6px 6px;color:var(--sec);}
+.disabled-panel .lock{width:34px;height:34px;color:var(--gold);margin:0 auto 12px;}
+.disabled-panel p{font-size:.85rem;line-height:1.6}
+
+.foot-note{text-align:center;color:var(--muted);font-size:.75rem;margin-top:18px;letter-spacing:.02em}
+</style>
+</head>
+<body>
+
+<div class="stage-bg"></div>
+<div class="grain"></div>
+<div class="rays"></div>
+
+<div class="curtain-valance"></div>
+<div class="curtain left"></div>
+<div class="curtain right"></div>
+
+<div class="wrap">
+  <div class="logo-row">
+    <svg class="reel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/><circle cx="12" cy="6.3" r="1.6"/><circle cx="17.2" cy="9.6" r="1.6"/><circle cx="15.3" cy="15.9" r="1.6"/><circle cx="8.7" cy="15.9" r="1.6"/><circle cx="6.8" cy="9.6" r="1.6"/></svg>
+    <h1>CineSubz</h1>
+    <p>සිංහල උපසිරැසි සමඟ Movies සොයන්න</p>
+  </div>
+
+  <div class="marquee-frame">
+    <div class="bulbs" id="bulbs"></div>
+    <div class="card">
+
+      <div id="auth-forms">
+        <div class="tabs">
+          <button type="button" id="tab-login" class="active">Sign In</button>
+          <button type="button" id="tab-register">Create Account</button>
+          <div class="tab-slider" id="tab-slider"></div>
+        </div>
+
+        <form id="form" autocomplete="on">
+          <div class="field name-field" id="name-field">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>
+            <input type="text" id="name" placeholder="Full name" autocomplete="name">
+          </div>
+          <div class="field">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 6 8.5 6.5L20.5 6"/></svg>
+            <input type="email" id="email" placeholder="Email address" autocomplete="email" required>
+          </div>
+          <div class="field">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
+            <input type="password" id="password" placeholder="Password" autocomplete="current-password" required>
+            <button type="button" class="toggle-eye" id="toggle-eye" aria-label="Show password">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.6"/></svg>
+            </button>
+          </div>
+
+          <div class="msg" id="msg"></div>
+
+          <button type="submit" class="submit-btn" id="submit-btn">
+            <span class="btn-label" id="btn-label">Sign In</span>
+            <span class="spin"></span>
+          </button>
+        </form>
+      </div>
+
+      <div class="disabled-panel" id="disabled-panel" style="display:none">
+        <svg class="lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.2"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
+        <p>Email sign-in is currently turned off by the site admin.<br>Please check back later.</p>
+      </div>
+
+    </div>
+  </div>
+
+  <p class="foot-note">Made for Sri Lankan movie lovers · Secure sign-in</p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// scatter marquee bulbs around the frame border
+(function bulbs(){
+  const holder = $('bulbs');
+  const count = 28;
+  for(let i=0;i<count;i++){
+    const t = i/count;
+    const s = document.createElement('span');
+    const angle = t*2*Math.PI;
+    const rx = 50, ry = 50;
+    const x = 50 + rx*Math.cos(angle);
+    const y = 50 + ry*Math.sin(angle);
+    s.style.left = x+'%';
+    s.style.top = y+'%';
+    s.style.animationDelay = (t*1.8).toFixed(2)+'s';
+    holder.appendChild(s);
+  }
+})();
+
+let mode = 'login'; // or 'register'
+let emailLoginEnabled = true;
+
+function setMode(next){
+  mode = next;
+  $('tab-login').classList.toggle('active', mode==='login');
+  $('tab-register').classList.toggle('active', mode==='register');
+  $('tab-slider').style.transform = mode==='register' ? 'translateX(100%)' : 'translateX(0)';
+  $('name-field').classList.toggle('show', mode==='register');
+  $('password').setAttribute('autocomplete', mode==='register' ? 'new-password' : 'current-password');
+  $('btn-label').textContent = mode==='register' ? 'Create Account' : 'Sign In';
+  $('msg').textContent='';
+  $('msg').className='msg';
+}
+$('tab-login').onclick = () => setMode('login');
+$('tab-register').onclick = () => setMode('register');
+
+$('toggle-eye').onclick = () => {
+  const inp = $('password');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+};
+
+async function checkSession(){
+  try{
+    const r = await fetch('/api/auth/me');
+    if(r.ok){
+      window.location.href = '/index.html';
+    }
+  }catch(e){}
+}
+
+async function loadConfig(){
+  try{
+    const r = await fetch('/api/config');
+    const data = await r.json();
+    emailLoginEnabled = data.emailLoginEnabled !== false;
+  }catch(e){
+    emailLoginEnabled = true;
+  }
+  if(!emailLoginEnabled){
+    $('auth-forms').style.display='none';
+    $('disabled-panel').style.display='block';
+  }
+}
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = $('submit-btn');
+  const msg = $('msg');
+  msg.textContent=''; msg.className='msg';
+
+  const email = $('email').value.trim();
+  const password = $('password').value;
+  const name = $('name').value.trim();
+
+  if(mode==='register' && !name){
+    msg.textContent = 'Please enter your name.';
+    return;
+  }
+  if(!email || !password){
+    msg.textContent = 'Please fill in all fields.';
+    return;
+  }
+
+  btn.disabled = true; btn.classList.add('loading');
+  try{
+    const endpoint = mode==='register' ? '/api/auth/register' : '/api/auth/login';
+    const body = mode==='register' ? {name, email, password} : {email, password};
+    const r = await fetch(endpoint, {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(body)
+    });
+    const data = await r.json();
+    if(!r.ok || !data.ok){
+      throw new Error(data.error || 'Something went wrong.');
+    }
+    msg.textContent = mode==='register' ? 'Account created! Redirecting…' : 'Welcome back! Redirecting…';
+    msg.className = 'msg ok';
+    setTimeout(()=>{ window.location.href = '/index.html'; }, 500);
+  }catch(err){
+    msg.textContent = err.message;
+    msg.className = 'msg';
+  }finally{
+    btn.disabled = false; btn.classList.remove('loading');
+  }
+});
+
+loadConfig();
+checkSession();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "cinesubz-premium",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CineSubz Premium - Sinhala subtitle movie search with login and MongoDB caching",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "mongodb": "^6.8.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

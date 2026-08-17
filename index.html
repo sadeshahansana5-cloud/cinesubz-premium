@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineSubz · Sinhala Subtitle Movies</title>
+<meta name="description" content="Search Sinhala subtitled movies on CineSubz.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800;900&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&family=Noto+Sans+Sinhala:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a090c;
+  --bg-2:#121016;
+  --card:#17151b;
+  --elevated:#1e1b23;
+  --border:rgba(255,255,255,0.07);
+  --border-gold:rgba(217,178,76,0.22);
+  --ink:#f4efe4;
+  --sec:#b6afc0;
+  --muted:#726c7c;
+  --gold:#d9b24c;
+  --gold-2:#f4d98a;
+  --crimson:#c8283f;
+  --ok:#4fae7c;
+  --err:#e0566a;
+  --blue:#5b8ef2;
+  --radius:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Inter','Noto Sans Sinhala',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important;}}
+
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:
+  radial-gradient(ellipse 55% 40% at 15% 0%, rgba(217,178,76,0.07) 0%, transparent 55%),
+  radial-gradient(ellipse 45% 35% at 100% 20%, rgba(200,40,63,0.08) 0%, transparent 55%),
+  var(--bg);}
+.grain{position:fixed;inset:0;z-index:0;opacity:.045;pointer-events:none;mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+.wrap{position:relative;z-index:1;max-width:1180px;margin:0 auto;padding:0 20px 40px}
+
+/* ---------- Topbar ---------- */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:18px 0;gap:14px;
+  opacity:0;animation:fadeDown .6s ease .05s forwards;}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit;cursor:pointer;}
+.brand .reel{width:26px;height:26px;color:var(--gold);animation:spin 10s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.brand span{font-family:'Playfair Display',serif;font-weight:800;font-size:1.3rem;letter-spacing:.01em;
+  background:linear-gradient(135deg,var(--gold-2),var(--gold) 60%,#a97f2a);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+
+.user-box{position:relative}
+.avatar-btn{display:flex;align-items:center;gap:9px;background:var(--elevated);border:1px solid var(--border);
+  border-radius:30px;padding:6px 14px 6px 6px;cursor:pointer;color:var(--ink);font-family:inherit;transition:all .25s;}
+.avatar-btn:hover{border-color:var(--border-gold)}
+.avatar-circle{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--gold-2),var(--gold));
+  display:flex;align-items:center;justify-content:center;font-weight:800;font-size:.8rem;color:#1a1208;}
+.avatar-name{font-size:.83rem;font-weight:600;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.avatar-btn .chev{width:14px;height:14px;color:var(--muted);transition:transform .25s}
+.user-box.open .chev{transform:rotate(180deg)}
+.dropdown{position:absolute;right:0;top:calc(100% + 10px);background:var(--elevated);border:1px solid var(--border);
+  border-radius:12px;min-width:190px;box-shadow:0 20px 40px rgba(0,0,0,0.5);overflow:hidden;
+  opacity:0;transform:translateY(-8px) scale(.98);pointer-events:none;transition:all .2s ease;z-index:40;}
+.user-box.open .dropdown{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+.dropdown .d-email{padding:12px 14px;font-size:.75rem;color:var(--muted);border-bottom:1px solid var(--border);word-break:break-all}
+.dropdown button{width:100%;display:flex;align-items:center;gap:8px;background:none;border:none;color:var(--sec);
+  padding:11px 14px;font-family:inherit;font-size:.85rem;cursor:pointer;transition:all .2s;text-align:left}
+.dropdown button:hover{background:rgba(200,40,63,0.12);color:var(--err)}
+.dropdown button svg{width:16px;height:16px}
+
+/* ---------- Hero / search ---------- */
+header.hero{text-align:center;padding:22px 0 26px;opacity:0;animation:fadeUp .7s ease .1s forwards}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+header.hero h1{font-family:'Playfair Display',serif;font-size:2.5rem;font-weight:800;letter-spacing:.01em;
+  background:linear-gradient(135deg,var(--gold-2),var(--gold) 45%,var(--crimson) 130%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+header.hero p{color:var(--sec);margin-top:8px;font-size:.95rem}
+
+.search{display:flex;gap:10px;max-width:640px;margin:26px auto 0;position:relative}
+.search .field{flex:1;position:relative}
+.search .field svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);width:19px;height:19px;color:var(--muted);pointer-events:none}
+.search input{width:100%;background:var(--elevated);border:1px solid var(--border);border-radius:14px;
+  padding:15px 16px 15px 46px;color:var(--ink);font-size:.96rem;outline:none;font-family:inherit;transition:all .25s}
+.search input::placeholder{color:var(--muted)}
+.search input:focus{border-color:var(--border-gold);box-shadow:0 0 0 4px rgba(217,178,76,0.09)}
+.search button{background:linear-gradient(135deg,var(--gold-2),var(--gold) 65%,#b6892f);border:none;border-radius:14px;
+  color:#1a1208;padding:0 26px;font-size:.94rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;
+  transition:all .25s;box-shadow:0 10px 24px rgba(217,178,76,0.18)}
+.search button svg{width:17px;height:17px}
+.search button:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(217,178,76,0.28)}
+.search button:disabled{opacity:.55;cursor:not-allowed;transform:none}
+.search button .spin{width:15px;height:15px;border-radius:50%;border:2px solid rgba(26,18,8,.3);border-top-color:#1a1208;
+  animation:spin2 .7s linear infinite;display:none}
+.search button.loading .spin{display:inline-block}
+.search button.loading .btxt{display:none}
+@keyframes spin2{to{transform:rotate(360deg)}}
+
+.status{text-align:center;padding:16px 0 6px;color:var(--sec);font-size:.9rem;min-height:24px;display:flex;align-items:center;justify-content:center;gap:8px}
+.status svg{width:16px;height:16px}
+.status.error{color:var(--err)}
+.status .src-tag{font-family:'JetBrains Mono',monospace;font-size:.68rem;background:rgba(217,178,76,0.12);color:var(--gold);
+  padding:2px 8px;border-radius:20px;letter-spacing:.03em}
+
+/* ---------- Grid / ticket cards ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:20px;margin:18px 0 36px}
+.card{position:relative;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  overflow:hidden;cursor:pointer;text-decoration:none;color:inherit;display:block;
+  transition:transform .35s cubic-bezier(.2,.8,.2,1), box-shadow .35s, border-color .35s;
+  opacity:0;transform:translateY(16px);animation:cardIn .5s cubic-bezier(.2,.8,.2,1) forwards;}
+@keyframes cardIn{to{opacity:1;transform:translateY(0)}}
+.card:hover{transform:translateY(-8px);box-shadow:0 22px 44px rgba(0,0,0,0.5);border-color:var(--border-gold)}
+.card .poster{aspect-ratio:2/3;background:linear-gradient(135deg,#1c1c26,#0f0f16);position:relative;overflow:hidden}
+.card .poster img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+.card:hover .poster img{transform:scale(1.09)}
+.card .poster .fallback{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.card .poster .fallback svg{width:44px;height:44px}
+.card .poster .shine{position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,0.75) 100%)}
+.card .rating-chip{position:absolute;top:9px;right:9px;background:rgba(10,9,12,0.75);backdrop-filter:blur(6px);
+  border:1px solid rgba(217,178,76,0.3);border-radius:8px;padding:3px 8px;display:flex;align-items:center;gap:4px;
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:600;color:var(--gold-2)}
+.card .rating-chip svg{width:11px;height:11px}
+
+/* perforated ticket divider */
+.perf{position:relative;height:0;border-top:2px dashed rgba(255,255,255,0.12);margin:0 12px}
+.perf::before,.perf::after{content:'';position:absolute;top:-8px;width:16px;height:16px;border-radius:50%;background:var(--bg);}
+.perf::before{left:-20px}.perf::after{right:-20px}
+
+.card .info{padding:12px}
+.card .info .t{font-size:.86rem;font-weight:700;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden;margin-bottom:8px;min-height:2.4em}
+.card .info .m{display:flex;align-items:center;justify-content:space-between}
+.card .info .q{font-family:'JetBrains Mono',monospace;font-size:.68rem;font-weight:600;letter-spacing:.03em;
+  color:var(--muted);background:rgba(255,255,255,0.05);padding:3px 8px;border-radius:5px}
+.card .info .go{width:15px;height:15px;color:var(--gold);opacity:0;transform:translateX(-4px);transition:all .3s}
+.card:hover .info .go{opacity:1;transform:translateX(0)}
+
+/* ---------- Skeletons ---------- */
+.skel-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:20px;margin:18px 0 36px}
+.skel-card{background:var(--card);border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+.skel-img{aspect-ratio:2/3;background:linear-gradient(100deg,var(--card) 30%,#2b2534 50%,var(--card) 70%);
+  background-size:220% 100%;animation:sh 1.6s ease-in-out infinite}
+.skel-t{height:11px;margin:12px 12px 0;background:linear-gradient(100deg,var(--card) 30%,#2b2534 50%,var(--card) 70%);
+  background-size:220% 100%;animation:sh 1.6s ease-in-out infinite;border-radius:4px}
+.skel-t.s{width:55%;margin:8px 12px 12px}
+@keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+.empty{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty svg{width:52px;height:52px;color:var(--muted);margin-bottom:14px;opacity:.6}
+.empty p{font-size:.92rem}
+
+/* ---------- Detail page ---------- */
+.detail-page{display:none}
+.detail-page.active{display:block;animation:fadeUp .5s ease}
+.back-btn{display:inline-flex;align-items:center;gap:7px;background:var(--elevated);border:1px solid var(--border);
+  color:var(--sec);padding:9px 16px;border-radius:11px;text-decoration:none;font-size:.84rem;margin-bottom:18px;
+  cursor:pointer;transition:all .25s;font-family:inherit}
+.back-btn svg{width:15px;height:15px}
+.back-btn:hover{color:var(--ink);border-color:var(--border-gold);transform:translateX(-2px)}
+
+.detail-hero{position:relative;border-radius:20px;overflow:hidden;margin-bottom:-70px;height:260px;pointer-events:none}
+.detail-hero img{width:100%;height:100%;object-fit:cover;filter:blur(18px) brightness(.5) saturate(1.2);transform:scale(1.15)}
+.detail-hero .fade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,9,12,0.2) 0%,var(--bg) 92%)}
+
+.detail-grid{position:relative;display:grid;grid-template-columns:260px 1fr;gap:28px;background:var(--card);
+  border:1px solid var(--border);border-radius:20px;padding:26px;margin-bottom:32px;box-shadow:0 30px 60px rgba(0,0,0,0.4)}
+.detail-grid .dp{border-radius:14px;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.55);
+  background:linear-gradient(135deg,#1c1c26,#0f0f16);aspect-ratio:2/3;position:relative}
+.detail-grid .dp img{width:100%;height:100%;object-fit:cover;display:block}
+.detail-grid .dp .fb{width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.detail-grid .dp .fb svg{width:48px;height:48px}
+.detail-grid h2{font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:800;margin-bottom:12px;line-height:1.3}
+.detail-grid .badges{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+.detail-grid .badges span{padding:5px 12px;border-radius:20px;font-size:.76rem;font-weight:700;display:inline-flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace}
+.detail-grid .badges span svg{width:12px;height:12px}
+.detail-grid .badges .br{background:rgba(217,178,76,0.14);color:var(--gold-2)}
+.detail-grid .badges .bq{background:rgba(91,142,242,0.14);color:var(--blue)}
+.detail-grid .badges .by{background:rgba(79,174,124,0.14);color:var(--ok)}
+.detail-grid h4{color:var(--sec);font-size:.76rem;text-transform:uppercase;letter-spacing:1.2px;margin:20px 0 10px;
+  display:flex;align-items:center;gap:7px;font-weight:700}
+.detail-grid h4 svg{width:14px;height:14px;color:var(--gold)}
+.detail-grid p.desc{color:var(--sec);line-height:1.75;font-size:.9rem}
+
+.cast{display:flex;flex-wrap:wrap;gap:7px}
+.cast span{background:var(--elevated);border:1px solid var(--border);padding:6px 13px;border-radius:20px;font-size:.8rem;color:var(--sec)}
+.cast span small{color:var(--muted);margin-left:4px}
+
+.dl{display:flex;flex-direction:column;gap:10px}
+.dl-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.dl a,.dl button{display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border-radius:11px;
+  text-decoration:none;font-weight:700;font-size:.83rem;border:none;cursor:pointer;color:#0f0d11;transition:all .25s;font-family:inherit}
+.dl a svg,.dl button svg{width:15px;height:15px}
+.dl a:hover{transform:scale(1.03) translateY(-1px);box-shadow:0 10px 22px rgba(0,0,0,0.35)}
+.dl .q480{background:linear-gradient(135deg,#7fa9f7,var(--blue))}
+.dl .q720{background:linear-gradient(135deg,#7fd6a8,var(--ok))}
+.dl .q1080{background:linear-gradient(135deg,var(--gold-2),var(--gold))}
+.dl .qoth{background:linear-gradient(135deg,#d38fef,#a855f7);color:#1a1120}
+.copy-btn{background:var(--elevated) !important;border:1px solid var(--border) !important;color:var(--sec) !important;}
+.copy-btn:hover{border-color:var(--border-gold) !important;color:var(--ink) !important}
+.copy-btn.copied{color:var(--ok) !important;border-color:rgba(79,174,124,0.4) !important}
+.dl button:disabled{opacity:.35;cursor:not-allowed;transform:none !important;box-shadow:none !important}
+.zt-note{color:var(--muted);font-size:.78rem;margin-top:6px;display:flex;align-items:center;gap:6px}
+.zt-note svg{width:13px;height:13px;flex-shrink:0}
+
+footer{text-align:center;padding:30px 0 10px;color:var(--muted);font-size:.78rem}
+
+/* ---------- Toast ---------- */
+.toast-holder{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none}
+.toast{background:var(--elevated);border:1px solid var(--border-gold);color:var(--ink);padding:11px 20px;border-radius:30px;
+  font-size:.84rem;display:flex;align-items:center;gap:8px;box-shadow:0 14px 30px rgba(0,0,0,0.5);
+  animation:toastIn .3s cubic-bezier(.2,.8,.2,1), toastOut .3s ease 2.2s forwards;}
+.toast svg{width:15px;height:15px;color:var(--ok)}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px) scale(.95)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes toastOut{to{opacity:0;transform:translateY(6px) scale(.97)}}
+
+/* ---------- Auth gate overlay ---------- */
+#gate{position:fixed;inset:0;background:var(--bg);z-index:200;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+#gate .reel{width:38px;height:38px;color:var(--gold);animation:spin 1.1s linear infinite}
+#gate p{color:var(--muted);font-size:.85rem}
+
+@media(max-width:768px){
+  .detail-grid{grid-template-columns:1fr}
+  .detail-grid .dp{max-width:220px;margin:0 auto}
+  .detail-hero{display:none}
+  .detail-grid{margin-top:0}
+  .grid,.skel-grid{grid-template-columns:repeat(2,1fr)}
+  .search{flex-direction:column}
+  .search button{width:100%;padding:14px}
+  .avatar-name{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="gate"><svg class="reel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/><circle cx="12" cy="6.3" r="1.6"/><circle cx="17.2" cy="9.6" r="1.6"/><circle cx="15.3" cy="15.9" r="1.6"/><circle cx="8.7" cy="15.9" r="1.6"/><circle cx="6.8" cy="9.6" r="1.6"/></svg><p>Loading your session…</p></div>
+
+<div class="bg"></div>
+<div class="grain"></div>
+<div class="wrap" id="app" style="display:none">
+
+  <div class="topbar">
+    <a href="#" class="brand" id="brand-link">
+      <svg class="reel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.4" fill="currentColor" stroke="none"/><circle cx="12" cy="6.3" r="1.6"/><circle cx="17.2" cy="9.6" r="1.6"/><circle cx="15.3" cy="15.9" r="1.6"/><circle cx="8.7" cy="15.9" r="1.6"/><circle cx="6.8" cy="9.6" r="1.6"/></svg>
+      <span>CineSubz</span>
+    </a>
+    <div class="user-box" id="user-box">
+      <button class="avatar-btn" id="avatar-btn">
+        <span class="avatar-circle" id="avatar-circle">?</span>
+        <span class="avatar-name" id="avatar-name">Account</span>
+        <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+      <div class="dropdown">
+        <div class="d-email" id="d-email"></div>
+        <button id="logout-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>
+          Sign out
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SEARCH PAGE -->
+  <div id="search-page">
+    <header class="hero">
+      <h1>CineSubz</h1>
+      <p>සිංහල උපසිරැසි සමඟ Movies සොයන්න</p>
+    </header>
+    <div class="search">
+      <div class="field">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" id="q" placeholder="Movie name type කරන්න... (උදා: Guns, Deadpool)" autocomplete="off">
+      </div>
+      <button id="btn" onclick="doSearch()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <span class="btxt">Search</span>
+        <span class="spin"></span>
+      </button>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="skel-grid" id="skel" style="display:none">
+      <div class="skel-card"><div class="skel-img"></div><div class="skel-t"></div><div class="skel-t s"></div></div>
+      <div class="skel-card"><div class="skel-img"></div><div class="skel-t"></div><div class="skel-t s"></div></div>
+      <div class="skel-card"><div class="skel-img"></div><div class="skel-t"></div><div class="skel-t s"></div></div>
+      <div class="skel-card"><div class="skel-img"></div><div class="skel-t"></div><div class="skel-t s"></div></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <!-- DETAIL PAGE -->
+  <div id="detail-page" class="detail-page">
+    <a href="#" class="back-btn" id="back-btn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+      Back to Search
+    </a>
+    <div class="detail-hero" id="detail-hero" style="display:none"><img id="detail-hero-img" alt=""><div class="fade"></div></div>
+    <div class="status" id="d-status"></div>
+    <div id="detail-content"></div>
+  </div>
+
+  <footer>Made for Sri Lankan Movie Lovers</footer>
+</div>
+
+<div class="toast-holder" id="toast-holder"></div>
+
+<script>
+// ─── DOM ────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+let loading = false;
+let currentUser = null;
+
+// ─── ICONS ──────────────────────────────────────────────────────────────────
+const ICONS = {
+  film: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M7 4v16M17 4v16M3 9h4M3 15h4M17 9h4M17 15h4"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2.5l2.9 6.4 6.9.7-5.2 4.7 1.5 6.9L12 17.8l-6.1 3.4 1.5-6.9-5.2-4.7 6.9-.7z"/></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="16" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>',
+  cast: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="7" r="4"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 4v16l14-8Z"/></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v13m0 0-4.5-4.5M12 16l4.5-4.5"/><path d="M4 19.5h16"/></svg>',
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9.5 14.5 14.5 9.5"/><path d="M11 7.5 12.6 5.9a3.5 3.5 0 0 1 5 5L16 12.5"/><path d="M13 16.5 11.4 18.1a3.5 3.5 0 0 1-5-5L8 11.5"/></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m5 12.5 4.5 4.5L19 7"/></svg>',
+  info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.01"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4.5M12 17v.01"/><path d="M10.3 3.9 1.8 18.5A1.6 1.6 0 0 0 3.2 21h17.6a1.6 1.6 0 0 0 1.4-2.5L13.7 3.9a1.6 1.6 0 0 0-2.7 0Z"/></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
+  chevRight: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 6 6 6-6 6"/></svg>',
+};
+
+// ─── AUTH GATE ──────────────────────────────────────────────────────────────
+async function checkAuth() {
+  try {
+    const r = await fetch('/api/auth/me');
+    if (!r.ok) { window.location.href = '/login.html'; return; }
+    const data = await r.json();
+    if (!data.authenticated) { window.location.href = '/login.html'; return; }
+    currentUser = data.user;
+    initUserUI();
+    $('gate').style.display = 'none';
+    $('app').style.display = 'block';
+    checkRoute();
+  } catch (e) {
+    window.location.href = '/login.html';
+  }
+}
+
+function initUserUI() {
+  const name = currentUser.name || currentUser.email || 'Account';
+  const initials = name.trim().split(/\s+/).map(p => p[0]).slice(0, 2).join('').toUpperCase();
+  $('avatar-circle').textContent = initials || 'U';
+  $('avatar-name').textContent = name;
+  $('d-email').textContent = currentUser.email || '';
+}
+
+$('avatar-btn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $('user-box').classList.toggle('open');
+});
+document.addEventListener('click', () => $('user-box').classList.remove('open'));
+
+$('logout-btn').addEventListener('click', async () => {
+  try { await fetch('/api/auth/logout', { method: 'POST' }); } catch (e) {}
+  window.location.href = '/login.html';
+});
+
+// ─── TOAST ──────────────────────────────────────────────────────────────────
+function showToast(text) {
+  const holder = $('toast-holder');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = ICONS.check + '<span>' + esc(text) + '</span>';
+  holder.appendChild(el);
+  setTimeout(() => el.remove(), 2600);
+}
+
+// ─── ROUTING ────────────────────────────────────────────────────────────────
+function checkRoute() {
+  const hash = window.location.hash;
+  if (hash.startsWith('#movie=')) {
+    const link = decodeURIComponent(hash.substring(7));
+    showDetailPage(link);
+  } else {
+    showSearchPage();
+  }
+}
+$('brand-link').addEventListener('click', (e) => { e.preventDefault(); window.location.hash = ''; });
+
+function showSearchPage() {
+  $('search-page').style.display = 'block';
+  $('detail-page').classList.remove('active');
+  document.title = 'CineSubz · Sinhala Subtitle Movies';
+}
+
+function showDetailPage(link) {
+  $('search-page').style.display = 'none';
+  $('detail-page').classList.add('active');
+  loadDetail(link);
+}
+
+// ─── API ────────────────────────────────────────────────────────────────────
+async function apiGet(path, params) {
+  const url = new URL(path, window.location.origin);
+  Object.entries(params || {}).forEach(([k, v]) => url.searchParams.set(k, v));
+  const r = await fetch(url.toString());
+  if (r.status === 401) { window.location.href = '/login.html'; throw new Error('Session expired'); }
+  const data = await r.json();
+  if (!r.ok || !data.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// ─── SEARCH ─────────────────────────────────────────────────────────────────
+async function doSearch() {
+  const query = $('q').value.trim();
+  if (!query) { setStatus('Movie name එකක් type කරන්න', false, ICONS.search); return; }
+  if (loading) return;
+  loading = true;
+  const btn = $('btn');
+  btn.disabled = true; btn.classList.add('loading');
+  setStatus('Searching…', false, null);
+  $('grid').innerHTML = '';
+  $('skel').style.display = 'grid';
+
+  try {
+    const data = await apiGet('/api/search', { q: query });
+    $('skel').style.display = 'none';
+    const results = data.data || [];
+    if (!results.length) {
+      setStatus('Results නැහැ. වෙනත් keyword එකක් උත්සාහ කරන්න.', false, ICONS.search);
+      $('grid').innerHTML = emptyState('No movies matched your search.');
+      return;
+    }
+    const srcTag = data.source === 'cache' ? '<span class="src-tag">from cache</span>' : '';
+    setStatus(results.length + ' movies found ' + srcTag, false, ICONS.film, true);
+    renderGrid(results);
+  } catch (e) {
+    $('skel').style.display = 'none';
+    setStatus(e.message, true, ICONS.alert);
+  } finally {
+    loading = false;
+    btn.disabled = false; btn.classList.remove('loading');
+  }
+}
+
+function setStatus(text, isError, icon, allowHtml) {
+  const el = $('status');
+  el.className = 'status' + (isError ? ' error' : '');
+  el.innerHTML = (icon ? icon : '') + (allowHtml ? ('<span>' + text + '</span>') : ('<span>' + esc(text) + '</span>'));
+}
+
+function emptyState(text) {
+  return `<div class="empty" style="grid-column:1/-1">${ICONS.film}<p>${esc(text)}</p></div>`;
+}
+
+function renderGrid(results) {
+  $('grid').innerHTML = results.map((m, i) => {
+    const title = (m && m.title) || 'Unknown';
+    const img = (m && (m.image || m.poster)) || '';
+    const quality = (m && m.quality) || '';
+    const rating = (m && m.imdb_rating) || '';
+    const link = (m && m.link) || '';
+    const hash = link ? '#movie=' + encodeURIComponent(link) : '';
+    return `<a class="card" href="${hash}" style="animation-delay:${Math.min(i * 0.04, 0.5)}s">
+      <div class="poster">
+        ${img ? `<img src="${esc(img)}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">` : ''}
+        <div class="fallback" style="${img ? 'display:none' : ''}">${ICONS.film}</div>
+        <div class="shine"></div>
+        ${rating ? `<div class="rating-chip">${ICONS.star}${esc(rating)}</div>` : ''}
+      </div>
+      <div class="info">
+        <div class="t">${esc(title)}</div>
+        <div class="m">
+          ${quality ? `<span class="q">${esc(quality)}</span>` : '<span></span>'}
+          <span class="go">${ICONS.chevRight}</span>
+        </div>
+      </div>
+    </a>`;
+  }).join('');
+}
+
+// ─── DETAIL PAGE ────────────────────────────────────────────────────────────
+async function loadDetail(link) {
+  const status = $('d-status');
+  const content = $('detail-content');
+  const hero = $('detail-hero');
+  content.innerHTML = '';
+  hero.style.display = 'none';
+
+  if (!link) {
+    status.innerHTML = ICONS.alert + '<span>Movie link not found in URL.</span>';
+    status.className = 'status error';
+    return;
+  }
+
+  status.innerHTML = '<span>Loading details…</span>';
+  status.className = 'status';
+
+  try {
+    const data = await apiGet('/api/movie', { url: link });
+    const info = data.data || {};
+
+    const title = info.title || 'Unknown Movie';
+    const poster = info.poster || '';
+    const rating = info.imdb_rating || 'N/A';
+    const quality = info.quality || 'WEB-DL';
+    const year = info.year || '';
+
+    let desc = info.description || 'No description available.';
+    if (typeof desc !== 'string') desc = 'No description available.';
+    desc = desc.replace(/📌.*/s, '').replace(/🎬.*/s, '').trim();
+    if (desc.length > 900) desc = desc.substring(0, 900) + '...';
+
+    if (poster) {
+      $('detail-hero-img').src = poster;
+      hero.style.display = 'block';
+    }
+
+    const posterHtml = poster
+      ? `<img src="${esc(poster)}" alt="${esc(title)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div class="fb" style="display:none">${ICONS.film}</div>`
+      : `<div class="fb">${ICONS.film}</div>`;
+
+    let badges = `<span class="br">${ICONS.star}${esc(rating)}/10</span><span class="bq">${ICONS.film}${esc(quality)}</span>`;
+    if (year) badges += `<span class="by">${ICONS.calendar}${esc(year)}</span>`;
+
+    const cast = info.cast || [];
+    let castHtml = '';
+    if (cast && cast.length) {
+      const tags = cast.filter(c => c && c.name).map(c =>
+        `<span>${esc(c.name)}<small>as ${esc(c.role || '')}</small></span>`
+      ).join('');
+      if (tags) castHtml = `<h4>${ICONS.cast}Cast</h4><div class="cast">${tags}</div>`;
+    }
+
+    const downloads = info.download_links || [];
+    let dlHtml = '';
+    if (downloads && downloads.length) {
+      const rows = downloads.map(dl => {
+        if (!dl) return '';
+        const qv = dl.quality || 'Link';
+        const sz = dl.size ? ` · ${dl.size}` : '';
+        const final = dl.final_link || '';
+        const zt = dl.original_zt_link || '';
+        const cls = qv.includes('480') ? 'q480' : qv.includes('720') ? 'q720' : qv.includes('1080') ? 'q1080' : 'qoth';
+
+        let buttons = '';
+        if (final) {
+          buttons += `<a href="${esc(final)}" target="_blank" rel="noopener" class="${cls}">${ICONS.download}Direct ${esc(qv)}${esc(sz)}</a>`;
+        } else {
+          buttons += `<button disabled class="${cls}">${ICONS.download}Direct ${esc(qv)} (unavailable)</button>`;
+        }
+        if (zt) {
+          buttons += `<button class="copy-btn" onclick="copyLink(this,'${esc(zt)}')">${ICONS.link}Copy Link ${esc(qv)}</button>`;
+        }
+        return `<div class="dl-row">${buttons}</div>`;
+      }).join('');
+
+      if (rows) {
+        dlHtml = `<h4>${ICONS.download}Download Links</h4><div class="dl">${rows}</div><p class="zt-note">${ICONS.info}If Direct Download doesn't work, use "Copy Link" and paste it in your browser.</p>`;
+      }
+    }
+    if (!dlHtml) {
+      dlHtml = `<h4>${ICONS.download}Download Links</h4><p style="color:var(--muted)">No links available for this title yet.</p>`;
+    }
+
+    content.innerHTML = `<div class="detail-grid">
+      <div class="dp">${posterHtml}</div>
+      <div>
+        <h2>${esc(title)}</h2>
+        <div class="badges">${badges}</div>
+        <h4>${ICONS.play}Plot Summary</h4>
+        <p class="desc">${esc(desc)}</p>
+        ${castHtml}
+        ${dlHtml}
+      </div>
+    </div>`;
+
+    document.title = esc(title) + ' · CineSubz';
+    status.innerHTML = data.source === 'cache' ? ('<span class="src-tag">Showing cached copy</span>') : '';
+    status.className = 'status';
+  } catch (e) {
+    status.innerHTML = ICONS.alert + '<span>' + esc(e.message) + '</span>';
+    status.className = 'status error';
+  }
+}
+
+// ─── COPY LINK ──────────────────────────────────────────────────────────────
+function copyLink(btn, url) {
+  navigator.clipboard.writeText(url).then(() => {
+    const old = btn.innerHTML;
+    btn.classList.add('copied');
+    btn.innerHTML = ICONS.check + 'Copied!';
+    showToast('Link copied to clipboard');
+    setTimeout(() => { btn.innerHTML = old; btn.classList.remove('copied'); }, 2000);
+  }).catch(() => {
+    window.open(url, '_blank');
+  });
+}
+
+// ─── UTILS ──────────────────────────────────────────────────────────────────
+function esc(t) {
+  if (!t) return '';
+  const d = document.createElement('div');
+  d.textContent = t;
+  return d.innerHTML;
+}
+
+$('q').addEventListener('keypress', e => { if (e.key === 'Enter') doSearch(); });
+window.addEventListener('hashchange', checkRoute);
+
+checkAuth();
+</script>
+</body>
+</html>
