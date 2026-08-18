@@ -1,10 +1,17 @@
 const { getDb } = require('../lib/db');
 const { getSessionUser } = require('../lib/auth');
 
-const API_KEY = process.env.MOVIE_API_KEY;
+// Falls back to the same key the original page shipped with, so the site keeps
+// working out of the box. Set MOVIE_API_KEY in Vercel to override it with your own.
+const API_KEY = process.env.MOVIE_API_KEY || '844eb9535c14d74716c89ca486ca996e';
 const API_BASES = (process.env.MOVIE_API_BASES ||
   'https://www.sadaslk.com/api/v1/movie,https://back.asitha.top/api,https://apis.sadas.dev/api/v1/movie'
 ).split(',').map((s) => s.trim()).filter(Boolean);
+
+const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+};
 
 async function fetchFromUpstream(query) {
   let lastErr = null;
@@ -14,10 +21,10 @@ async function fetchFromUpstream(query) {
       url.searchParams.set('q', query);
       if (API_KEY) url.searchParams.set('apiKey', API_KEY);
       const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), 9000);
-      const r = await fetch(url.toString(), { signal: controller.signal });
+      const t = setTimeout(() => controller.abort(), 12000);
+      const r = await fetch(url.toString(), { signal: controller.signal, headers: BROWSER_HEADERS });
       clearTimeout(t);
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.ok) throw new Error('HTTP ' + r.status + ' from ' + base);
       const data = await r.json();
       if (data && (data.status || (data.data && data.data.length))) {
         return data;
@@ -25,6 +32,7 @@ async function fetchFromUpstream(query) {
       lastErr = new Error('Empty response from ' + base);
     } catch (e) {
       lastErr = e;
+      console.warn('[search] upstream failed:', base, e.message);
     }
   }
   throw lastErr || new Error('All upstream APIs failed');
@@ -92,7 +100,7 @@ module.exports = async function handler(req, res) {
     console.warn('upstream search failed, falling back to cache:', e.message);
 
     if (!db) {
-      res.status(502).json({ ok: false, error: 'Search is temporarily unavailable.' });
+      res.status(502).json({ ok: false, error: 'The movie service is taking a break right now — please try again in a moment.' });
       return;
     }
 
@@ -106,7 +114,7 @@ module.exports = async function handler(req, res) {
         .toArray();
 
       if (!cached.length) {
-        res.status(502).json({ ok: false, error: 'Search API is unavailable right now and no cached results matched.' });
+        res.status(502).json({ ok: false, error: 'The movie service is taking a break right now — please try again in a moment.' });
         return;
       }
 

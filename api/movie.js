@@ -1,20 +1,27 @@
 const { getDb } = require('../lib/db');
 const { getSessionUser } = require('../lib/auth');
 
-const API_KEY = process.env.MOVIE_API_KEY;
+// Falls back to the same key the original page shipped with, so the site keeps
+// working out of the box. Set MOVIE_API_KEY in Vercel to override it with your own.
+const API_KEY = process.env.MOVIE_API_KEY || '844eb9535c14d74716c89ca486ca996e';
 const API_BASES = (process.env.MOVIE_API_BASES ||
   'https://www.sadaslk.com/api/v1/movie,https://back.asitha.top/api,https://apis.sadas.dev/api/v1/movie'
 ).split(',').map((s) => s.trim()).filter(Boolean);
+
+const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+};
 
 async function fetchOne(base, path, params) {
   const url = new URL(base + path);
   Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
   if (API_KEY) url.searchParams.set('apiKey', API_KEY);
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 9000);
-  const r = await fetch(url.toString(), { signal: controller.signal });
+  const t = setTimeout(() => controller.abort(), 12000);
+  const r = await fetch(url.toString(), { signal: controller.signal, headers: BROWSER_HEADERS });
   clearTimeout(t);
-  if (!r.ok) throw new Error('HTTP ' + r.status);
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' from ' + base + path);
   return r.json();
 }
 
@@ -30,6 +37,7 @@ async function fetchFromUpstream(link) {
       lastErr = new Error('Empty response from ' + base);
     } catch (e) {
       lastErr = e;
+      console.warn('[movie] upstream failed:', base, e.message);
     }
   }
   throw lastErr || new Error('All upstream APIs failed');
@@ -83,7 +91,7 @@ module.exports = async function handler(req, res) {
     console.warn('upstream detail failed, falling back to cache:', e.message);
 
     if (!db) {
-      res.status(502).json({ ok: false, error: 'Movie details are temporarily unavailable.' });
+      res.status(502).json({ ok: false, error: 'This title is taking longer than usual to load — please try again.' });
       return;
     }
 
@@ -91,13 +99,13 @@ module.exports = async function handler(req, res) {
       const details = db.collection('movie_details');
       const cached = await details.findOne({ link });
       if (!cached) {
-        res.status(502).json({ ok: false, error: 'Details API is unavailable and no cached copy was found.' });
+        res.status(502).json({ ok: false, error: 'This title is taking longer than usual to load — please try again.' });
         return;
       }
       res.status(200).json({ ok: true, source: 'cache', data: cached });
     } catch (dbErr) {
       console.error('cache fallback error', dbErr);
-      res.status(502).json({ ok: false, error: 'Movie details are temporarily unavailable.' });
+      res.status(502).json({ ok: false, error: 'This title is taking longer than usual to load — please try again.' });
     }
   }
 };
