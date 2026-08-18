@@ -530,7 +530,33 @@ function showDetailPage(link) {
   loadDetail(link);
 }
 
-// ─── API ────────────────────────────────────────────────────────────────────
+// ─── MOVIE API (fetched directly from the browser — this is a public,
+// CORS-enabled API meant for client use, exactly like the original page) ───
+const API_KEY = "844eb9535c14d74716c89ca486ca996e";
+const API_BASES = [
+  "https://www.sadaslk.com/api/v1/movie",
+  "https://back.asitha.top/api",
+  "https://apis.sadas.dev/api/v1/movie",
+];
+
+async function apiReq(endpoint, params) {
+  let lastErr = null;
+  for (const base of API_BASES) {
+    try {
+      const url = new URL(base + endpoint);
+      Object.entries({ ...params, apiKey: API_KEY }).forEach(([k, v]) => url.searchParams.set(k, v));
+      const r = await fetch(url.toString(), { mode: 'cors' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.json();
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr || new Error('All movie APIs failed');
+}
+
+// Our own backend: only used (a) to serve a MongoDB fallback if every live
+// API base fails, and (b) to silently report successful fetches for caching.
 async function apiGet(path, params) {
   const url = new URL(path, window.location.origin);
   Object.entries(params || {}).forEach(([k, v]) => url.searchParams.set(k, v));
@@ -539,6 +565,18 @@ async function apiGet(path, params) {
   const data = await r.json();
   if (!r.ok || !data.ok) throw new Error(data.error || 'Request failed');
   return data;
+}
+function reportSearchCache(results) {
+  fetch('/api/search', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ results }),
+  }).catch(() => {});
+}
+function reportDetailCache(link, data) {
+  fetch('/api/movie', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ link, data }),
+  }).catch(() => {});
 }
 
 // ─── TRENDING (homepage content before any search) ────────────────────────
@@ -579,21 +617,33 @@ async function doSearch() {
   progressStart();
 
   try {
-    const data = await apiGet('/api/search', { q: query });
+    const data = await apiReq('/cinesubz/search', { q: query });
     $('skel').style.display = 'none';
+
+    if (!data || (!data.status && !data.data)) {
+      throw new Error(data && data.error ? data.error : 'Search failed');
+    }
     const results = data.data || [];
     if (!results.length) {
       setStatus('Results නැහැ. වෙනත් keyword එකක් උත්සාහ කරන්න.', false, ICONS.search);
       $('grid').innerHTML = emptyState('No movies matched your search.');
       return;
     }
-    const srcTag = data.source === 'cache' ? '<span class="src-tag">from cache</span>' : '';
-    setStatus(results.length + ' movies found ' + srcTag, false, ICONS.film, true);
+    setStatus(results.length + ' movies found', false, ICONS.film, true);
     renderGrid(results);
+    reportSearchCache(results);
   } catch (e) {
     $('skel').style.display = 'none';
-    setStatus('', false, null);
-    $('grid').innerHTML = errorState(e.message, 'doSearch()');
+    // Live API failed entirely — fall back to our MongoDB cache.
+    try {
+      const cached = await apiGet('/api/search', { q: query });
+      const results = cached.data || [];
+      setStatus(results.length + ' cached results ' + '<span class="src-tag">from cache</span>', false, ICONS.film, true);
+      renderGrid(results);
+    } catch (cacheErr) {
+      setStatus('', false, null);
+      $('grid').innerHTML = errorState('The movie service is taking a break — please try again in a moment.', 'doSearch()');
+    }
   } finally {
     loading = false;
     btn.disabled = false; btn.classList.remove('loading');
@@ -660,10 +710,32 @@ async function loadDetail(link) {
   status.className = 'status';
   progressStart();
 
+  let info = null;
+  let source = 'live';
   try {
-    const data = await apiGet('/api/movie', { url: link });
-    const info = data.data || {};
+    let data = await apiReq('/cinesubz/movie-details', { url: link });
+    if (!data || !data.status) {
+      data = await apiReq('/cinesubz/info', { q: link });
+    }
+    if (!data || !data.data) throw new Error(data && data.error ? data.error : 'Details not found');
+    info = data.data;
+    reportDetailCache(link, info);
+  } catch (e) {
+    // Live API failed entirely — fall back to our MongoDB cache.
+    try {
+      const cached = await apiGet('/api/movie', { url: link });
+      info = cached.data || {};
+      source = 'cache';
+    } catch (cacheErr) {
+      status.innerHTML = '';
+      status.className = 'status';
+      content.innerHTML = errorState('This title is taking longer than usual to load — please try again.', 'loadDetail(lastMovieLink)');
+      progressDone();
+      return;
+    }
+  }
 
+  try {
     const title = info.title || 'Unknown Movie';
     const poster = info.poster || '';
     const rating = info.imdb_rating || 'N/A';
@@ -741,7 +813,7 @@ async function loadDetail(link) {
     </div>`;
 
     document.title = esc(title) + ' · CineSubz';
-    status.innerHTML = data.source === 'cache' ? ('<span class="src-tag">Showing cached copy</span>') : '';
+    status.innerHTML = source === 'cache' ? ('<span class="src-tag">Showing cached copy</span>') : '';
     status.className = 'status';
   } catch (e) {
     status.innerHTML = '';

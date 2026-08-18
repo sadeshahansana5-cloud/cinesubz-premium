@@ -72,21 +72,30 @@ Save → **Redeploy** (env variable වෙනස් කළාම redeploy කර
 ### Email login on/off කරන්නේ කොහොමද
 `EMAIL_LOGIN_ENABLED=false` → login page එකේ "sign-in is disabled" screen එක පෙන්නනවා, register/login API 403 return කරනවා. `true` කළ විට normal ලෙස වැඩ කරනවා.
 
-## What changed to fix "Details API is unavailable" errors
+## Why search & movie details work again
 
-The previous version only used your own `MOVIE_API_KEY` and could fail silently
-if it wasn't set correctly on Vercel, or if the request looked too "robotic" to
-the upstream API. Two fixes:
+The movie API (sadaslk / asitha / sadas.dev) is a **public, CORS-enabled API
+built for direct browser use** — exactly how the original single-file page
+called it. Routing those calls through a Vercel server function broke things,
+because the upstream hosts silently reject requests coming from server/
+datacenter IPs (common anti-bot behavior), even with browser-like headers.
 
-1. **A working fallback key is baked into the code** (the same one the original
-   single-file page used) — so search/details work immediately even before you
-   set `MOVIE_API_KEY` yourself. Setting your own key in Vercel still overrides it.
-2. **Requests now send browser-like headers** (User-Agent, Accept) to the
-   upstream API, since some hosts silently reject bare server requests.
+**The fix:** `index.html` now calls the movie API directly from the browser
+again — the exact same three API bases, same `apiKey` param, same two-step
+`movie-details` → `info` fallback as the original working file. This is the
+**primary path** and is what you'll see working immediately.
 
-MongoDB is now a **quiet background safety net**, not something you need to
-manage — it only kicks in if the live API genuinely fails, and it's what powers
-the new **Trending** section on the homepage.
+MongoDB is purely a **quiet safety net**, not a lookup path:
+- After every successful browser-side fetch, the results are silently
+  reported to `/api/search` (POST) or `/api/movie` (POST) and cached.
+- If *all three* live API bases fail for a user (rare — e.g. the upstream is
+  fully down), the app falls back to reading that MongoDB cache instead of
+  showing an error.
+- `/api/trending` reads the same cache to populate the homepage's
+  "Trending Right Now" section.
+
+`MOVIE_API_KEY` / `MOVIE_API_BASES` env vars are no longer used — there's
+nothing to configure for search/details to work.
 
 ## New in this version
 
@@ -100,8 +109,13 @@ the new **Trending** section on the homepage.
 
 ## How the caching works
 
-- `/api/search` and `/api/movie` try the live API first (with browser-like headers). On success, results are cached into MongoDB (`movies` and `movie_details` collections).
-- If the live API fails, cached results are served instead (labelled "from cache" in the UI) — the site keeps working.
+- Search and movie details are fetched **directly from the browser** (see
+  "Why search & movie details work again" above) — this is the same approach
+  the original working page used, and is why it's reliable.
+- Every successful browser-side fetch is silently reported to `/api/search`
+  and `/api/movie` (POST) so it's cached in MongoDB.
+- If the live API fails for a user, the app automatically falls back to that
+  MongoDB cache (labelled "from cache" in the UI) instead of showing an error.
 - `/api/trending` reads the most recently cached titles to populate the homepage.
 
 ## Local development
