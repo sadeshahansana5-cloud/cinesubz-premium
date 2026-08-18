@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy · CineSubz</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a090c;--card:#17151b;--elevated:#1e1b23;--border:rgba(255,255,255,0.08);
+  --ink:#f4efe4;--sec:#b6afc0;--muted:#726c7c;--gold:#d9b24c;--gold-2:#f4d98a;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--ink);line-height:1.7}
+.bg{position:fixed;inset:0;z-index:0;background:radial-gradient(ellipse 50% 35% at 50% 0%, rgba(217,178,76,0.07), transparent 60%),var(--bg)}
+.wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:50px 22px 70px}
+a.back{display:inline-flex;align-items:center;gap:7px;color:var(--sec);text-decoration:none;font-size:.85rem;
+  background:var(--elevated);border:1px solid var(--border);padding:9px 16px;border-radius:11px;margin-bottom:26px;transition:.25s}
+a.back:hover{color:var(--ink);border-color:rgba(217,178,76,0.3)}
+h1{font-family:'Playfair Display',serif;font-weight:800;font-size:2.1rem;margin-bottom:6px;
+  background:linear-gradient(135deg,var(--gold-2),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.updated{color:var(--muted);font-size:.8rem;margin-bottom:34px}
+h2{font-family:'Playfair Display',serif;font-size:1.25rem;margin:34px 0 12px;color:var(--gold-2)}
+p,li{color:var(--sec);font-size:.94rem}
+ul{padding-left:20px;margin:10px 0}
+li{margin-bottom:6px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:22px 24px;margin-top:30px}
+.card p{color:var(--muted);font-size:.85rem}
+strong{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="bg"></div>
+<div class="wrap">
+  <a class="back" href="/index.html">← Back to CineSubz</a>
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: August 2026</p>
+
+  <p>CineSubz ("we", "our") respects your privacy. This page explains what data we collect, why we collect it, and how it's protected when you use this site.</p>
+
+  <h2>What we collect</h2>
+  <ul>
+    <li><strong>Account info:</strong> your name, email address, and a securely hashed password (we never store your password in plain text — it's one-way hashed with bcrypt and cannot be reversed, even by us).</li>
+    <li><strong>Session data:</strong> a signed, HTTP-only login cookie that identifies your session. It cannot be read by JavaScript or other websites.</li>
+    <li><strong>Search activity:</strong> movie titles you search for are cached in our database so results keep loading quickly and reliably, even if an upstream data source is temporarily down.</li>
+  </ul>
+
+  <h2>Email verification</h2>
+  <p>When you create an account, we send a one-time 6-digit code to your email to confirm it belongs to you. This code expires after 10 minutes and is never stored in plain text — only a cryptographic hash of it is kept, and only until it's used or expired.</p>
+
+  <h2>What we don't do</h2>
+  <ul>
+    <li>We don't sell or share your personal data with advertisers.</li>
+    <li>We don't display third-party ads.</li>
+    <li>We don't track you across other websites.</li>
+  </ul>
+
+  <h2>Third-party services</h2>
+  <p>Movie metadata (titles, posters, ratings, download links) is retrieved from third-party subtitle/movie information APIs. We don't control the content or availability of external download links — please use your own judgement when visiting third-party sites linked from movie pages.</p>
+
+  <h2>Data retention</h2>
+  <p>Your account data is kept for as long as your account exists. Cached movie data is refreshed automatically and may be retained to keep the catalog fast and available. You can request account deletion at any time by contacting the site admin.</p>
+
+  <h2>Cookies</h2>
+  <p>We use a single essential cookie to keep you signed in. We don't use tracking or advertising cookies.</p>
+
+  <div class="card">
+    <p>This is a fan-made project for Sri Lankan movie lovers and is provided as-is. If you have questions about your data, reach out to the site admin listed in the app.</p>
+  </div>
+</div>
+</body>
+</html>
