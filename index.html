@@ -552,7 +552,28 @@ async function apiReq(endpoint, params) {
       lastErr = e;
     }
   }
-  throw lastErr || new Error('All movie APIs failed');
+  // Never throw — always resolve, exactly like the original page. A caller
+  // checking `data.status` needs this to fall through to a fallback endpoint
+  // instead of the whole call blowing up.
+  return { status: false, error: lastErr ? lastErr.message : 'All APIs failed' };
+}
+
+// Pulls the first http(s) URL out of an unknown response shape — the /dl
+// resolver endpoint's exact field name isn't documented, so we search for it.
+function findUrlInResponse(obj, depth) {
+  if (depth === undefined) depth = 0;
+  if (depth > 4 || obj == null) return null;
+  if (typeof obj === 'string') return /^https?:\/\//.test(obj) ? obj : null;
+  if (typeof obj !== 'object') return null;
+  const priorityKeys = ['final_link', 'direct_link', 'download_url', 'downloadLink', 'link', 'url', 'data'];
+  for (const k of priorityKeys) {
+    if (typeof obj[k] === 'string' && /^https?:\/\//.test(obj[k])) return obj[k];
+  }
+  for (const k in obj) {
+    const found = findUrlInResponse(obj[k], depth + 1);
+    if (found) return found;
+  }
+  return null;
 }
 
 // Our own backend: only used (a) to serve a MongoDB fallback if every live
@@ -621,8 +642,19 @@ async function doSearch() {
     $('skel').style.display = 'none';
 
     if (!data || (!data.status && !data.data)) {
-      throw new Error(data && data.error ? data.error : 'Search failed');
+      // Live API totally failed — fall back to our MongoDB cache.
+      try {
+        const cached = await apiGet('/api/search', { q: query });
+        const results = cached.data || [];
+        setStatus(results.length + ' cached results ' + '<span class="src-tag">from cache</span>', false, ICONS.film, true);
+        renderGrid(results);
+      } catch (cacheErr) {
+        setStatus('', false, null);
+        $('grid').innerHTML = errorState('The movie service is taking a break — please try again in a moment.', 'doSearch()');
+      }
+      return;
     }
+
     const results = data.data || [];
     if (!results.length) {
       setStatus('Results නැහැ. වෙනත් keyword එකක් උත්සාහ කරන්න.', false, ICONS.search);
@@ -632,18 +664,6 @@ async function doSearch() {
     setStatus(results.length + ' movies found', false, ICONS.film, true);
     renderGrid(results);
     reportSearchCache(results);
-  } catch (e) {
-    $('skel').style.display = 'none';
-    // Live API failed entirely — fall back to our MongoDB cache.
-    try {
-      const cached = await apiGet('/api/search', { q: query });
-      const results = cached.data || [];
-      setStatus(results.length + ' cached results ' + '<span class="src-tag">from cache</span>', false, ICONS.film, true);
-      renderGrid(results);
-    } catch (cacheErr) {
-      setStatus('', false, null);
-      $('grid').innerHTML = errorState('The movie service is taking a break — please try again in a moment.', 'doSearch()');
-    }
   } finally {
     loading = false;
     btn.disabled = false; btn.classList.remove('loading');
@@ -712,16 +732,17 @@ async function loadDetail(link) {
 
   let info = null;
   let source = 'live';
-  try {
-    let data = await apiReq('/cinesubz/movie-details', { url: link });
-    if (!data || !data.status) {
-      data = await apiReq('/cinesubz/info', { q: link });
-    }
-    if (!data || !data.data) throw new Error(data && data.error ? data.error : 'Details not found');
-    info = data.data;
-    reportDetailCache(link, info);
-  } catch (e) {
-    // Live API failed entirely — fall back to our MongoDB cache.
+
+  // Same two-step lookup as the original page: try movie-details first,
+  // fall back to info. Neither call throws — both resolve to {status:false}
+  // on failure, so this fallback actually runs (this was the bug before).
+  let data = await apiReq('/cinesubz/movie-details', { url: link });
+  if (!data || !data.status) {
+    data = await apiReq('/cinesubz/info', { q: link });
+  }
+
+  if (!data || !data.status || !data.data) {
+    // Live API totally failed — fall back to our MongoDB cache.
     try {
       const cached = await apiGet('/api/movie', { url: link });
       info = cached.data || {};
@@ -733,6 +754,23 @@ async function loadDetail(link) {
       progressDone();
       return;
     }
+  } else {
+    info = data.data;
+    // Resolve every download's real direct link (/cinesubz/dl) up front, in
+    // parallel, so the info AND the working download links arrive together —
+    // not one after the other on a later click.
+    const downloadsToResolve = (info.download_links || []).filter(dl => dl && !dl.final_link && dl.original_zt_link);
+    if (downloadsToResolve.length) {
+      status.innerHTML = '<span>Fetching download links…</span>';
+      await Promise.all(downloadsToResolve.map(async (dl) => {
+        try {
+          const dlData = await apiReq('/cinesubz/dl', { q: dl.original_zt_link });
+          const resolved = findUrlInResponse(dlData);
+          if (resolved) dl.final_link = resolved;
+        } catch (e) { /* leave unresolved — UI falls back to a retry button */ }
+      }));
+    }
+    reportDetailCache(link, info);
   }
 
   try {
@@ -782,6 +820,8 @@ async function loadDetail(link) {
         let buttons = '';
         if (final) {
           buttons += `<a href="${esc(final)}" target="_blank" rel="noopener" class="${cls}">${ICONS.download}Direct ${esc(qv)}${esc(sz)}</a>`;
+        } else if (zt) {
+          buttons += `<button class="${cls}" onclick="resolveDownload(this,'${esc(zt)}')">${ICONS.download}Get Direct ${esc(qv)} Link</button>`;
         } else {
           buttons += `<button disabled class="${cls}">${ICONS.download}Direct ${esc(qv)} (unavailable)</button>`;
         }
@@ -827,6 +867,26 @@ async function loadDetail(link) {
 function shareMovie(){
   const url = window.location.href;
   navigator.clipboard.writeText(url).then(() => showToast('Page link copied')).catch(() => {});
+}
+
+// ─── RESOLVE DIRECT LINK (via /cinesubz/dl) ────────────────────────────────
+async function resolveDownload(btn, ztLink) {
+  if (btn.disabled) return;
+  const old = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = ICONS.download + 'Resolving…';
+  try {
+    const data = await apiReq('/cinesubz/dl', { q: ztLink });
+    const url = findUrlInResponse(data);
+    if (!url) throw new Error('No direct link returned');
+    window.open(url, '_blank', 'noopener');
+    btn.innerHTML = ICONS.check + 'Opened!';
+    showToast('Direct link opened in a new tab');
+    setTimeout(() => { btn.innerHTML = old; btn.disabled = false; }, 2000);
+  } catch (e) {
+    btn.innerHTML = ICONS.alert + 'Failed — tap to retry';
+    btn.disabled = false;
+  }
 }
 
 // ─── COPY LINK ──────────────────────────────────────────────────────────────
