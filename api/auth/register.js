@@ -1,5 +1,9 @@
 const { getDb } = require('../../lib/db');
-const { hashPassword, signToken, setSessionCookie, isEmailLoginEnabled } = require('../../lib/auth');
+const { hashPassword, generateOtp, hashOtp, isEmailLoginEnabled } = require('../../lib/auth');
+const { sendOtpEmail } = require('../../lib/mailer');
+
+const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const RESEND_COOLDOWN_MS = 45 * 1000;
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -31,28 +35,54 @@ module.exports = async function handler(req, res) {
 
     const db = await getDb();
     const users = db.collection('users');
+    const pending = db.collection('pending_registrations');
     await users.createIndex({ email: 1 }, { unique: true });
+    await pending.createIndex({ email: 1 }, { unique: true });
+    await pending.createIndex({ otpExpiresAt: 1 }, { expireAfterSeconds: 0 });
 
     const existing = await users.findOne({ email: cleanEmail });
     if (existing) {
-      res.status(409).json({ ok: false, error: 'An account with this email already exists.' });
+      res.status(409).json({ ok: false, error: 'An account with this email already exists. Try signing in instead.' });
+      return;
+    }
+
+    const existingPending = await pending.findOne({ email: cleanEmail });
+    if (existingPending && existingPending.lastSentAt && (Date.now() - new Date(existingPending.lastSentAt).getTime()) < RESEND_COOLDOWN_MS) {
+      const waitSec = Math.ceil((RESEND_COOLDOWN_MS - (Date.now() - new Date(existingPending.lastSentAt).getTime())) / 1000);
+      res.status(429).json({ ok: false, error: `A code was already sent. Please wait ${waitSec}s before trying again.` });
       return;
     }
 
     const passwordHash = await hashPassword(password);
+    const otp = generateOtp();
     const now = new Date();
-    const result = await users.insertOne({
-      name: cleanName,
-      email: cleanEmail,
-      passwordHash,
-      createdAt: now,
-      lastLoginAt: now,
-    });
 
-    const token = signToken({ uid: result.insertedId.toString(), email: cleanEmail, name: cleanName });
-    setSessionCookie(res, token);
+    await pending.updateOne(
+      { email: cleanEmail },
+      {
+        $set: {
+          name: cleanName,
+          email: cleanEmail,
+          passwordHash,
+          otpHash: hashOtp(otp),
+          otpExpiresAt: new Date(Date.now() + OTP_TTL_MS),
+          attempts: 0,
+          lastSentAt: now,
+        },
+        $setOnInsert: { createdAt: now },
+      },
+      { upsert: true }
+    );
 
-    res.status(201).json({ ok: true, user: { id: result.insertedId.toString(), name: cleanName, email: cleanEmail } });
+    try {
+      await sendOtpEmail(cleanEmail, cleanName, otp);
+    } catch (mailErr) {
+      console.error('sendOtpEmail failed', mailErr);
+      res.status(502).json({ ok: false, error: 'Could not send the verification email. Please check the email address and try again shortly.' });
+      return;
+    }
+
+    res.status(200).json({ ok: true, stage: 'otp_sent', email: cleanEmail, expiresInSeconds: OTP_TTL_MS / 1000 });
   } catch (e) {
     console.error('register error', e);
     res.status(500).json({ ok: false, error: 'Registration failed. Please try again.' });
